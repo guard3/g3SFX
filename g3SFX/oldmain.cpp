@@ -1,163 +1,56 @@
-//g3SFX source code by guard3
 
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <filesystem>
-#include <Windows.h>
-
-struct soundData
+int main_old(int argc, char* argv[])
 {
-	uint32_t StartingOffset;
-	uint32_t Size;
-	uint32_t SampleRate;
-	int32_t LoopBeginOffset;
-	int32_t LoopEndOffset;
-};
-
-struct wavHeader_pc
-{
-	char ChunkID[4] = { 'R', 'I', 'F', 'F' };
-	uint32_t ChunkSize = 36;
-	char Format[4] = { 'W', 'A', 'V', 'E' };
-	char Subchunk1ID[4] = { 'f', 'm', 't', ' ' };
-	uint32_t Subchunk1Size = 16;
-	uint16_t AudioFormat = 1;
-	uint16_t NumChannels = 1;
-	uint32_t SampleRate;
-	uint32_t ByteRate;
-	uint16_t BlockAlign = 2;
-	uint16_t BitsPerSample = 16;
-	char Subchunk2ID[4] = { 'd', 'a', 't', 'a' };
-	uint32_t Subchunk2Size;
-};
-
-void exitWithHelpMessage(int _Code)
-{
-	std::cout << "This is a help message.";
-	exit(_Code);
-}
-
-class ConfigurationFile
-{
-private:
-	char cf_mode;
-	char* cf_source = new char[MAX_PATH];
-	char* cf_list = new char[MAX_PATH];
-	char* cf_loop = new char[MAX_PATH];
-	char* cf_output = new char[MAX_PATH];
-public:
-	ConfigurationFile() {};
-	ConfigurationFile(char* _IniFileName) { open(_IniFileName); }
-	~ConfigurationFile()
+	Argument argument;
+	try { argument.parseArgument(argc, argv); }
+	catch (const std::exception e)
 	{
-		delete[] cf_source;
-		delete[] cf_list;
-		delete[] cf_loop;
-		delete[] cf_output;
-	}
-	void open(std::string _IniFileName)
-	{
-		//Getting absolute INI path
-		while (_IniFileName.front() == '\\' || _IniFileName.front() == '/')
-		{
-			_IniFileName.erase(0, 1);
-			if (_IniFileName.empty()) throw "Invalid INI path specified.";
-		}
-		char* full_path_name_buffer = new char[MAX_PATH];
-		GetFullPathName(_IniFileName.c_str(), MAX_PATH, full_path_name_buffer, NULL);
-		_IniFileName = full_path_name_buffer;
-		delete[] full_path_name_buffer;
-		while (_IniFileName.back() == '\\') _IniFileName.pop_back();
-
-		//Getting INI root folder path
-		std::string ini_path_str = _IniFileName;
-		std::size_t found = ini_path_str.rfind("\\");
-		ini_path_str = ini_path_str.substr(0, found);
-
-		//Store mode info to cf_mode
-		char* mode_buffer = new char[3];
-		DWORD copied = GetPrivateProfileString("MODE", "mode", NULL, mode_buffer, 3, _IniFileName.c_str());
-		if (GetLastError() == 2) throw "Could not get mode info; either wrong INI path or missing parameter.";
-		if (strcmp(mode_buffer, "e") != 0 && strcmp(mode_buffer, "b")) throw "Invalid mode specified.";
-		cf_mode = mode_buffer[0];
-		delete[] mode_buffer;
-
-		//Store paths
-		GetPrivateProfileString(cf_mode == 'e' ? "EXTRACT" : "BUILD", "source", (ini_path_str + (cf_mode == 'e' ? "" : "\\sfx")).c_str(),  cf_source, MAX_PATH, _IniFileName.c_str());
-		GetPrivateProfileString(cf_mode == 'e' ? "EXTRACT" : "BUILD", "list", (ini_path_str + "\\sfx.lst").c_str(), cf_list, MAX_PATH, _IniFileName.c_str());
-		GetPrivateProfileString(cf_mode == 'e' ? "EXTRACT" : "BUILD", "loop", (ini_path_str + "\\loop.dat").c_str(), cf_loop, MAX_PATH, _IniFileName.c_str());
-		GetPrivateProfileString(cf_mode == 'e' ? "EXTRACT" : "BUILD", "output", (ini_path_str + (cf_mode == 'e' ? "\\sfx" : "")).c_str(), cf_output, MAX_PATH, _IniFileName.c_str());
-	}
-	char mode() { return cf_mode; }
-	std::string source() { return cf_source; }
-	std::string list() { return cf_list; }
-	std::string loop() { return cf_loop; }
-	std::string output() { return cf_output; }
-	bool isNoLoop() { return strcmp(cf_loop, "noloop") == 0; }
-	bool isNoList() { return strcmp(cf_list, "nolist") == 0; }
-};
-
-int main(int argc, char* argv[])
-{
-	//Ensure there's only one argument
-	if (argc == 1) exitWithHelpMessage(0);
-	if (argc > 2)
-	{
-		std::cout << "Too many arguments given.";
+		std::cout << e.what() << std::endl;
 		exit(0);
 	}
 
-	//TODO: Add check to ensure that the file extension is indeed an INI
-	//Parsing the ini
-	ConfigurationFile ini;
-	try { ini.open(argv[1]); }
-	catch (const char* e)
+	if (argument.action() == 'e')
 	{
-		std::cerr << e;
-		exit(0);
-	}
-
-	//Ported from previous version
-	if (ini.mode() == 'e')
-	{
-		std::ifstream sdt(ini.source() + "\\sfx.sdt", std::ios::binary);
+		std::ifstream sdt(argument.pathToSfxRawSdt() + "\\sfx.sdt", std::ios::binary);
 		if (!sdt)
 		{
-			std::cerr << ini.source() << "\\sfx.sdt\nCouldn't open file.";
+			std::cerr << argument.pathToSfxRawSdt() << "\\sfx.sdt\nCouldn't open file.\n";
 			exit(0);
 		}
-		std::ifstream raw(ini.source() + "\\sfx.raw", std::ios::binary);
+		std::ifstream raw(argument.pathToSfxRawSdt() + "\\sfx.raw", std::ios::binary);
 		if (!raw)
 		{
-			std::cerr << ini.source() << "\\sfx.raw\nCouldn't open file.";
+			std::cerr << argument.pathToSfxRawSdt() << "\\sfx.raw\nCouldn't open file.\n";
 			exit(0);
 		}
 		soundData sound_data;
 		std::ofstream loop;
-		if (!ini.isNoLoop())
+		if (!argument.isNoLoop())
 		{
-			loop.open(ini.loop());
+			loop.open(argument.pathToLoopList());
 			if (!loop)
 			{
-				std::cerr << ini.loop() << "\nCouldn't write to file.";
+				std::cerr << argument.pathToLoopList() << "\nCouldn't write to file.\n";
 				exit(0);
 			}
 			loop << ";SFX loop file - by guard3\n;A: Loop Byte Begin (0 for start of file)\n;B: Loop Byte End (-1 for end of file)\n;A\tB\n";
 		}
 		std::cout << "Extracting...\n";
-		if (ini.isNoList())
+		if (argument.isNoLst())
 		{
 			int i = 0;
-			try { std::experimental::filesystem::create_directories(ini.output().c_str()); }
+			//CreateDirectory((argument.pathToSfxRawSdt() + "\\sfx").c_str(), NULL);
+			try
+			{
+				std::experimental::filesystem::create_directories((argument.pathToSfxRawSdt() + "\\sfx").c_str());
+			}
 			catch (std::exception e) {}
 			while (sdt.read(reinterpret_cast<char*>(&sound_data), sizeof(soundData)))
 			{
-				std::ofstream wav(ini.output() + "\\sfx" + std::to_string(i) + ".wav", std::ios::binary);
+				std::ofstream wav(argument.pathToSfxRawSdt() + "\\sfx\\sfx" + std::to_string(i) + ".wav", std::ios::binary);
 				if (!wav)
 				{
-					std::cerr << ini.output() << "\\sfx" << i << ".wav\nCouldn't write to file.";
+					std::cerr << argument.pathToSfxRawSdt() << "\\sfx\\sfx" << i << ".wav\nCouldn't write to file.\n";
 					exit(0);
 				}
 				wavHeader_pc wav_header;
@@ -172,7 +65,7 @@ int main(int argc, char* argv[])
 				wav.write(buffer, sound_data.Size);
 				wav.close();
 
-				if (!ini.isNoLoop())
+				if (!argument.isNoLoop())
 				{
 					loop
 						<< std::to_string(sound_data.LoopBeginOffset)
@@ -181,18 +74,23 @@ int main(int argc, char* argv[])
 						<< "\t;sfx"
 						<< std::to_string(i)
 						<< "\n";
+					/*loop << std::hex << sound_data.LoopBeginOffset;
+					loop << "\t";
+					loop << std::hex << sound_data.LoopEndOffset;
+					loop << "\t;sfx" << std::to_string(i) << std::endl;*/
 				}
 
 				i++;
 				delete[] buffer;
 			}
+
 		}
 		else
 		{
-			std::ifstream lst(ini.list());
+			std::ifstream lst(argument.pathToSfxList());
 			if (!lst)
 			{
-				std::cerr << "Could not open list file.";
+				std::cerr << "Specified list file is invalid.\n";
 				exit(0);
 			}
 			std::string wav_path_from_lst;
@@ -228,14 +126,14 @@ int main(int argc, char* argv[])
 
 				try
 				{
-					std::experimental::filesystem::create_directories((ini.output() + "\\" + wav_folder_to_be_created).c_str());
+					std::experimental::filesystem::create_directories((argument.pathToSfxRawSdt() + "\\sfx\\" + wav_folder_to_be_created).c_str());
 				}
 				catch (std::exception e) {}
 
-				std::ofstream wav(ini.output() + "\\" + wav_path_from_lst, std::ios::binary);
+				std::ofstream wav(argument.pathToSfxRawSdt() + "\\sfx\\" + wav_path_from_lst, std::ios::binary);
 				if (!wav)
 				{
-					std::cerr << ini.output() << "\\" << wav_path_from_lst << "\nCouldn't write to file.";
+					std::cerr << argument.pathToSfxRawSdt() << "\\sfx\\" << wav_path_from_lst << "\nCouldn't write to file.\n";
 					exit(0);
 				}
 
@@ -252,7 +150,7 @@ int main(int argc, char* argv[])
 				wav.write(buffer, sound_data.Size);
 				wav.close();
 
-				if (!ini.isNoLoop())
+				if (!argument.isNoLoop())
 				{
 					loop
 						<< std::to_string(sound_data.LoopBeginOffset)
@@ -261,6 +159,10 @@ int main(int argc, char* argv[])
 						<< "\t;"
 						<< wav_path_from_lst
 						<< "\n";
+					/*loop << std::hex << sound_data.LoopBeginOffset;
+					loop << "\t";
+					loop << std::hex << sound_data.LoopEndOffset;
+					loop << "\t;sfx" << std::to_string(i) << std::endl;*/
 				}
 				delete[] buffer;
 			}
@@ -270,35 +172,36 @@ int main(int argc, char* argv[])
 		raw.close();
 		std::cout << "All done!\n";
 	}
-	if (ini.mode() == 'b')
+	if (argument.action() == 'b')
 	{
-		//TODO: Create output folder if it doesn't exist!!!
-		std::ofstream sdt(ini.output() + "\\sfx.sdt", std::ios::binary);
+		//std::string path_to_sdt_raw_for_extraction = argument.pathToSfxFolder();
+
+		std::ofstream sdt(argument.pathToSfxFolder() + "\\sfx.sdt", std::ios::binary);
 		if (!sdt)
 		{
-			std::cerr << ini.output() << "\\sfx.sdt\nCouldn't open file.";
+			std::cerr << argument.pathToSfxFolder() << "\\sfx.sdt\nCouldn't open file.\n";
 			exit(0);
 		}
-		std::ofstream raw(ini.output() + "\\sfx.raw", std::ios::binary);
+		std::ofstream raw(argument.pathToSfxFolder() + "\\sfx.raw", std::ios::binary);
 		if (!raw)
 		{
-			std::cerr << ini.output() << "\\sfx.raw\nCouldn't open file.";
+			std::cerr << argument.pathToSfxFolder() << "\\sfx.raw\nCouldn't open file.\n";
 			exit(0);
 		}
-		std::ifstream lst(ini.list());
+		std::ifstream lst(argument.pathToSfxList());
 		if (!lst)
 		{
-			std::cerr << "Could not open list file.";
+			std::cerr << "Specified list file is invalid.\n";
 			exit(0);
 		}
 
 		std::ifstream loop;
-		if (!ini.isNoLoop())
+		if (!argument.isNoLoop())
 		{
-			loop.open(ini.loop());
+			loop.open(argument.pathToLoopList());
 			if (!loop)
 			{
-				std::cerr << ini.loop() << "\nCouldn't open file.";
+				std::cerr << argument.pathToLoopList() << "\nCouldn't open file.\n";
 				exit(0);
 			}
 		}
@@ -330,10 +233,10 @@ int main(int argc, char* argv[])
 				found = wav_path_from_lst.find("\\\\");
 			}
 
-			std::ifstream wav(ini.source() + "\\" + wav_path_from_lst, std::ios::binary);
+			std::ifstream wav(argument.pathToSfxFolder() + "\\sfx\\" + wav_path_from_lst, std::ios::binary);
 			if (!wav)
 			{
-				std::cerr << ini.source() << "\\" << wav_path_from_lst << "\nCouldn't open file.";
+				std::cerr << argument.pathToSfxFolder() << "\\sfx\\" << wav_path_from_lst << "\nCouldn't open file.\n";
 				exit(0);
 			}
 
@@ -345,7 +248,7 @@ int main(int argc, char* argv[])
 			sound_data.Size = wav_header.Subchunk2Size;
 			sound_data.SampleRate = wav_header.SampleRate;
 
-			if (ini.isNoLoop())
+			if (argument.isNoLoop())
 			{
 				sound_data.LoopBeginOffset = 0;
 				sound_data.LoopEndOffset = -1;
@@ -391,5 +294,5 @@ int main(int argc, char* argv[])
 		if (loop) loop.close();
 		std::cout << "All done!\n";
 	}
-
+	return 0;
 }

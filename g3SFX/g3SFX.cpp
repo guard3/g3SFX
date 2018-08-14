@@ -81,7 +81,7 @@ public:
 
 		//Store paths
 		GetPrivateProfileString(cf_mode == 'e' ? "EXTRACT" : "BUILD", "source", (ini_path_str + (cf_mode == 'e' ? "" : "\\sfx")).c_str(),  cf_source, MAX_PATH, _IniFileName.c_str());
-		GetPrivateProfileString(cf_mode == 'e' ? "EXTRACT" : "BUILD", "list", cf_mode == 'e' ? "noloop" : "sfx.lst", cf_list, MAX_PATH, _IniFileName.c_str());
+		GetPrivateProfileString(cf_mode == 'e' ? "EXTRACT" : "BUILD", "list", cf_mode == 'e' ? "noloop" : (ini_path_str + "\\sfx.lst").c_str(), cf_list, MAX_PATH, _IniFileName.c_str());
 		if (cf_mode == 'b' && strcmp(cf_list, "nolist") == 0) throw "A list file is required to build an archive.";
 		GetPrivateProfileString(cf_mode == 'e' ? "EXTRACT" : "BUILD", "loop", "noloop", cf_loop, MAX_PATH, _IniFileName.c_str());
 		GetPrivateProfileString(cf_mode == 'e' ? "EXTRACT" : "BUILD", "output", (ini_path_str + (cf_mode == 'e' ? "\\sfx" : "")).c_str(), cf_output, MAX_PATH, _IniFileName.c_str());

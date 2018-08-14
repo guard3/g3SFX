@@ -1,4 +1,5 @@
 //g3SFX source code by guard3
+//TODO: Add Xbox and PS2(?) support
 
 #include <iostream>
 #include <string>
@@ -32,12 +33,6 @@ struct wavHeader_pc
 	char Subchunk2ID[4] = { 'd', 'a', 't', 'a' };
 	uint32_t Subchunk2Size;
 };
-
-void exitWithHelpMessage(int _Code)
-{
-	std::cout << "This is a help message.";
-	exit(_Code);
-}
 
 class ConfigurationFile
 {
@@ -102,7 +97,13 @@ public:
 int main(int argc, char* argv[])
 {
 	//Ensure there's only one argument
-	if (argc == 1) exitWithHelpMessage(0);
+	if (argc == 1)
+	{
+		std::cout
+			<< "g3SFX - a SFX utility for GTA III/VC and Manhunt by guard3\n"
+			<< "Usage: g3SFX [path to INI file]";
+		exit(0);
+	}
 	if (argc > 2)
 	{
 		std::cout << "Too many arguments given.";
@@ -119,7 +120,8 @@ int main(int argc, char* argv[])
 		exit(0);
 	}
 
-	//Ported from previous version
+	//Extract or Build
+	//TODO: Make huge blocks into separate more "manageable" functions. Possibly get rid of gotos
 	if (ini.mode() == 'e')
 	{
 		std::ifstream sdt(ini.source() + "\\sfx.sdt", std::ios::binary);
@@ -226,10 +228,7 @@ int main(int argc, char* argv[])
 				if (found != std::string::npos) wav_folder_to_be_created = wav_path_from_lst.substr(0, found);
 				else wav_folder_to_be_created = "";
 
-				try
-				{
-					std::experimental::filesystem::create_directories((ini.output() + "\\" + wav_folder_to_be_created).c_str());
-				}
+				try { std::experimental::filesystem::create_directories((ini.output() + "\\" + wav_folder_to_be_created).c_str()); }
 				catch (std::exception e) {}
 
 				std::ofstream wav(ini.output() + "\\" + wav_path_from_lst, std::ios::binary);
@@ -268,11 +267,12 @@ int main(int argc, char* argv[])
 		if (loop) loop.close();
 		sdt.close();
 		raw.close();
-		std::cout << "All done!\n";
+		std::cout << "All done!";
 	}
 	if (ini.mode() == 'b')
 	{
-		//TODO: Create output folder if it doesn't exist!!!
+		try { std::experimental::filesystem::create_directories(ini.output().c_str()); }
+		catch (std::exception e) {}
 		std::ofstream sdt(ini.output() + "\\sfx.sdt", std::ios::binary);
 		if (!sdt)
 		{
@@ -389,7 +389,6 @@ int main(int argc, char* argv[])
 		raw.close();
 		lst.close();
 		if (loop) loop.close();
-		std::cout << "All done!\n";
+		std::cout << "All done!";
 	}
-
 }

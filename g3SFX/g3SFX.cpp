@@ -170,6 +170,7 @@ int main(int argc, char* argv[])
 				wav_header.Subchunk2Size = sound_data.Size;
 
 				char* buffer = new char[sound_data.Size];
+				raw.seekg(sound_data.StartingOffset);
 				raw.read(buffer, sound_data.Size);
 				wav.write(reinterpret_cast<const char*>(&wav_header), sizeof(wav_header));
 				wav.write(buffer, sound_data.Size);
@@ -247,6 +248,7 @@ int main(int argc, char* argv[])
 				wav_header.Subchunk2Size = sound_data.Size;
 
 				char* buffer = new char[sound_data.Size];
+				raw.seekg(sound_data.StartingOffset);
 				raw.read(buffer, sound_data.Size);
 				wav.write(reinterpret_cast<const char*>(&wav_header), sizeof(wav_header));
 				wav.write(buffer, sound_data.Size);
